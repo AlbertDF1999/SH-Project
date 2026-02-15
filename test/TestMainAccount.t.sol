@@ -97,6 +97,8 @@ contract TestMainAccount is Test {
         bytes32 digest = userOpHash.toEthSignedMessageHash();
         uint256 missingAccountFunds = 1e18;
 
+        vm.deal(address(mainAccount), 1e18);
+
         //Act
         vm.prank(helperConfig.getConfig().entryPoint);
         //we should parse the validation data since it has a lot of information
