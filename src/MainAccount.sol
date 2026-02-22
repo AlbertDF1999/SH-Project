@@ -117,28 +117,27 @@ contract MainAccount is IAccount, Ownable, Initializable {
         }
     }
 
-    // /**
-    //  * @notice Execute multiple transactions in a single call
-    //  * @param dest Array of destination addresses
-    //  * @param values Array of ETH amounts to send
-    //  * @param functionData Array of calldata to execute
-    //  */
-    // function executeBatch(
-    //     address[] calldata dest,
-    //     uint256[] calldata values,
-    //     bytes[] calldata functionData
-    // ) external requireFromEntryPointOrOwner {
-    //     if (dest.length != values.length || values.length != functionData.length) {
-    //         revert MainAccount__InvalidArrayLength();
-    //     }
+    /**
+     * @notice Execute multiple transactions in a single call
+     * @param dest Array of destination addresses
+     * @param values Array of ETH amounts to send
+     * @param functionData Array of calldata to execute
+     */
+    function executeBatch(address[] calldata dest, uint256[] calldata values, bytes[] calldata functionData)
+        external
+        requireFromEntryPointOrOwner
+    {
+        if (dest.length != values.length || values.length != functionData.length) {
+            revert MainAccount__InvalidArrayLength();
+        }
 
-    //     for (uint256 i = 0; i < dest.length; i++) {
-    //         (bool success, bytes memory result) = dest[i].call{value: values[i]}(functionData[i]);
-    //         if (!success) {
-    //             revert MainAccount__CallFailed(result);
-    //         }
-    //     }
-    // }
+        for (uint256 i = 0; i < dest.length; i++) {
+            (bool success, bytes memory result) = dest[i].call{value: values[i]}(functionData[i]);
+            if (!success) {
+                revert MainAccount__CallFailed(result);
+            }
+        }
+    }
 
     /**
      * @notice Validate a user operation

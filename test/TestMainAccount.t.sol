@@ -141,7 +141,7 @@ contract TestMainAccount is Test {
     // uint256 constant AMOUNT = 1e18;
     // address randomUser = makeAddr("randomUser");
     // address guardian = makeAddr("guardian");
-    
+
     // // Session key test addresses
     // address sessionKeyAddr = makeAddr("sessionKey");
     // uint256 sessionKeyPrivateKey = 0x1234567890abcdef;
@@ -151,7 +151,7 @@ contract TestMainAccount is Test {
     //     (helperConfig, factory, mainAccount) = deployMain.deployMainAccountWithFactory();
     //     usdc = new ERC20Mock();
     //     sendPackedUserOp = new SendPackedUserOp();
-        
+
     //     // Set up guardian
     //     vm.prank(mainAccount.owner());
     //     mainAccount.setGuardian(guardian);
@@ -165,11 +165,11 @@ contract TestMainAccount is Test {
     //     address dest = address(usdc);
     //     uint256 value = 0;
     //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-        
+
     //     //ACT
     //     vm.prank(mainAccount.owner());
     //     mainAccount.execute(dest, value, functionData);
-        
+
     //     //ASSERT
     //     assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT);
     // }
@@ -180,47 +180,47 @@ contract TestMainAccount is Test {
     //     address dest = address(usdc);
     //     uint256 value = 0;
     //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-        
+
     //     //ACT
     //     vm.prank(randomUser);
     //     vm.expectRevert(MainAccount.MainAccount__NotFromEntryPointorOwner.selector);
     //     mainAccount.execute(dest, value, functionData);
     // }
 
-    // //////////BATCH EXECUTION TESTS
+    //////////BATCH EXECUTION TESTS
 
-    // function testBatchExecution() public {
-    //     //ARRANGE
-    //     address[] memory destinations = new address[](2);
-    //     uint256[] memory values = new uint256[](2);
-    //     bytes[] memory functionDataArray = new bytes[](2);
+    function testBatchExecution() public {
+        //ARRANGE
+        address[] memory destinations = new address[](2);
+        uint256[] memory values = new uint256[](2);
+        bytes[] memory functionDataArray = new bytes[](2);
 
-    //     destinations[0] = address(usdc);
-    //     destinations[1] = address(usdc);
-    //     values[0] = 0;
-    //     values[1] = 0;
-    //     functionDataArray[0] = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-    //     functionDataArray[1] = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
+        destinations[0] = address(usdc);
+        destinations[1] = address(usdc);
+        values[0] = 0;
+        values[1] = 0;
+        functionDataArray[0] = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
+        functionDataArray[1] = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
 
-    //     //ACT
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.executeBatch(destinations, values, functionDataArray);
+        //ACT
+        vm.prank(mainAccount.owner());
+        mainAccount.executeBatch(destinations, values, functionDataArray);
 
-    //     //ASSERT
-    //     assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT * 2);
-    // }
+        //ASSERT
+        assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT * 2);
+    }
 
-    // function testBatchExecutionRevertsOnInvalidArrayLength() public {
-    //     //ARRANGE
-    //     address[] memory destinations = new address[](2);
-    //     uint256[] memory values = new uint256[](1); // Mismatched length
-    //     bytes[] memory functionDataArray = new bytes[](2);
+    function testBatchExecutionRevertsOnInvalidArrayLength() public {
+        //ARRANGE
+        address[] memory destinations = new address[](2);
+        uint256[] memory values = new uint256[](1); // Mismatched length
+        bytes[] memory functionDataArray = new bytes[](2);
 
-    //     //ACT & ASSERT
-    //     vm.prank(mainAccount.owner());
-    //     vm.expectRevert(MainAccount.MainAccount__InvalidArrayLength.selector);
-    //     mainAccount.executeBatch(destinations, values, functionDataArray);
-    // }
+        //ACT & ASSERT
+        vm.prank(mainAccount.owner());
+        vm.expectRevert(MainAccount.MainAccount__InvalidArrayLength.selector);
+        mainAccount.executeBatch(destinations, values, functionDataArray);
+    }
 
     // //////////SESSION KEY TESTS
 
@@ -246,10 +246,10 @@ contract TestMainAccount is Test {
     // function testRevokeSessionKey() public {
     //     //ARRANGE
     //     uint48 validUntil = uint48(block.timestamp + 1 days);
-        
+
     //     vm.prank(mainAccount.owner());
     //     mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
-        
+
     //     assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
 
     //     //ACT
@@ -263,10 +263,10 @@ contract TestMainAccount is Test {
     // function testSessionKeyExpiration() public {
     //     //ARRANGE
     //     uint48 validUntil = uint48(block.timestamp + 1 hours);
-        
+
     //     vm.prank(mainAccount.owner());
     //     mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
-        
+
     //     assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
 
     //     //ACT - Move time forward past expiration
@@ -295,13 +295,13 @@ contract TestMainAccount is Test {
     //     //ARRANGE
     //     address newOwner = makeAddr("newOwner");
     //     address oldOwner = mainAccount.owner();
-        
+
     //     vm.prank(guardian);
     //     mainAccount.initiateRecovery(newOwner);
 
     //     //ACT - Wait for recovery period
     //     vm.warp(block.timestamp + mainAccount.RECOVERY_PERIOD() + 1);
-        
+
     //     vm.prank(guardian);
     //     mainAccount.executeRecovery();
 
@@ -315,7 +315,7 @@ contract TestMainAccount is Test {
     // function testCannotExecuteRecoveryBeforePeriod() public {
     //     //ARRANGE
     //     address newOwner = makeAddr("newOwner");
-        
+
     //     vm.prank(guardian);
     //     mainAccount.initiateRecovery(newOwner);
 
@@ -328,7 +328,7 @@ contract TestMainAccount is Test {
     // function testOwnerCanCancelRecovery() public {
     //     //ARRANGE
     //     address newOwner = makeAddr("newOwner");
-        
+
     //     vm.prank(guardian);
     //     mainAccount.initiateRecovery(newOwner);
 
@@ -432,7 +432,7 @@ contract TestMainAccount is Test {
     //     //ACT
     //     vm.prank(helperConfig.getConfig().entryPoint);
     //     uint256 validationData = mainAccount.validateUserOp(packedUserOp, userOpHash, missingAccountFunds);
-        
+
     //     //ASSERT
     //     assertEq(validationData, 0);
     // }
@@ -456,7 +456,7 @@ contract TestMainAccount is Test {
     //     //ACT
     //     vm.prank(randomUser);
     //     IEntryPoint(helperConfig.getConfig().entryPoint).handleOps(ops, payable(randomUser));
-        
+
     //     //ASSERT
     //     assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT);
     // }
