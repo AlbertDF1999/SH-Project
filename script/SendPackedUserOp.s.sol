@@ -37,7 +37,7 @@ contract SendPackedUserOp is Script {
         if (block.chainid == 31337) {
             (v, r, s) = vm.sign(ANVIL_DEFAULT_KEY, digest);
         } else {
-            (v, r, s) = vm.sign(config.account, digest);
+            (v, r, s) = vm.sign(vm.envUint("PRIVATE_KEY"), digest);
         }
 
         userOp.signature = abi.encodePacked(r, s, v);
@@ -49,17 +49,23 @@ contract SendPackedUserOp is Script {
         pure
         returns (PackedUserOperation memory)
     {
-        uint128 verificationGasLimit = 16777216;
+        // Before executing your UserOp, the EntryPoint needs a deposit from your smart account to cover potential gas costs. Here's how it was calculated:
+        // The formula: prefund = (verificationGasLimit + callGasLimit + preVerificationGas) × maxFeePerGas
+        // So: (500,000 + 500,000 + 100,000) × 1,000,000 = 1,100,000,000,000 wei = 0.0000011 ETH
+        // This is the amount your MainAccount sent to the EntryPoint during validateUserOp via _payPrefunds. You can see it in the trace:
+        // EntryPoint::receive{value: 1100000000000}
+        // emit Deposited(account: MainAccount, totalDeposit: 1100000000000)
+        uint128 verificationGasLimit = 500000;
         uint128 callGasLimit = verificationGasLimit;
-        uint128 maxPriorityFeePerGas = 256;
-        uint128 maxFeePerGas = maxPriorityFeePerGas;
+        uint128 maxPriorityFeePerGas = 100000;
+        uint128 maxFeePerGas = 1000000;
         return PackedUserOperation({
             sender: sender,
             nonce: nonce,
             initCode: hex"",
             callData: callData,
             accountGasLimits: bytes32(uint256(verificationGasLimit) << 128 | callGasLimit),
-            preVerificationGas: verificationGasLimit,
+            preVerificationGas: 100000,
             gasFees: bytes32(uint256(maxPriorityFeePerGas) << 128 | maxFeePerGas),
             paymasterAndData: hex"",
             signature: hex""

@@ -8,7 +8,9 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 // import {MainAccountFactory} from "../src/MainAccountFactory.sol";
 
 contract DeployMainAccount is Script {
-    function run() public {}
+    function run() public {
+        deployMainAccount();
+    }
 
     function deployMainAccount() public returns (HelperConfig, MainAccount) {
         HelperConfig helperConfig = new HelperConfig();
@@ -21,10 +23,10 @@ contract DeployMainAccount is Script {
         return (helperConfig, mainAccount);
     }
 
-    /**
-     * @notice Deploy factory and create an account
-     * @dev This is the new recommended way to deploy accounts
-     */
+    // /**
+    //  * @notice Deploy factory and create an account
+    //  * @dev This is the new recommended way to deploy accounts
+    //  */
     // function deployMainAccountWithFactory()
     //     public
     //     returns (HelperConfig, MainAccountFactory, MainAccount)

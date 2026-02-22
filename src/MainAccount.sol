@@ -21,7 +21,7 @@ contract MainAccount is IAccount, Ownable, Initializable {
     // error MainAccount__NotFromEntryPoint();
     // error MainAccount__NotFromEntryPointorOwner();
     // error MainAccount__CallFailed(bytes);
-    // error MainAccount__InvalidArrayLength();
+    error MainAccount__InvalidArrayLength();
     // error MainAccount__SessionKeyNotValid();
     // error MainAccount__SessionKeyNotAuthorized();
     // error MainAccount__RecoveryNotInitiated();
@@ -92,10 +92,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
         _disableInitializers(); // Prevents initialization of implementation contract
     }
 
-    /**
-     * @notice Initialize the account - called by factory
-     * @param anOwner The owner of this account
-     */
+    // /**
+    //  * notice Initialize the account - called by factory
+    //  * param anOwner The owner of this account
+    //  */
     // function initialize(address anOwner) public initializer {
     //     _transferOwnership(anOwner);
     // }
@@ -117,12 +117,12 @@ contract MainAccount is IAccount, Ownable, Initializable {
         }
     }
 
-    /**
-     * @notice Execute multiple transactions in a single call
-     * @param dest Array of destination addresses
-     * @param values Array of ETH amounts to send
-     * @param functionData Array of calldata to execute
-     */
+    // /**
+    //  * @notice Execute multiple transactions in a single call
+    //  * @param dest Array of destination addresses
+    //  * @param values Array of ETH amounts to send
+    //  * @param functionData Array of calldata to execute
+    //  */
     // function executeBatch(
     //     address[] calldata dest,
     //     uint256[] calldata values,
@@ -159,13 +159,13 @@ contract MainAccount is IAccount, Ownable, Initializable {
 
     //////////SESSION KEY FUNCTIONS
 
-    /**
-     * @notice Add a new session key with specific permissions
-     * @param sessionKey The address of the session key
-     * @param validUntil Timestamp when the key expires
-     * @param target The contract this key can interact with (address(0) for any)
-     * @param selector The function this key can call (bytes4(0) for any)
-     */
+    // /**
+    //  * @notice Add a new session key with specific permissions
+    //  * @param sessionKey The address of the session key
+    //  * @param validUntil Timestamp when the key expires
+    //  * @param target The contract this key can interact with (address(0) for any)
+    //  * @param selector The function this key can call (bytes4(0) for any)
+    //  */
     // function addSessionKey(
     //     address sessionKey,
     //     uint48 validUntil,
@@ -183,10 +183,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
     //     emit SessionKeyAdded(sessionKey, validUntil, target, selector);
     // }
 
-    /**
-     * @notice Revoke a session key
-     * @param sessionKey The address of the session key to revoke
-     */
+    // /**
+    //  * @notice Revoke a session key
+    //  * @param sessionKey The address of the session key to revoke
+    //  */
     // function revokeSessionKey(address sessionKey) external onlyOwner {
     //     sessionKeys[sessionKey].isActive = false;
     //     emit SessionKeyRevoked(sessionKey);
@@ -194,29 +194,29 @@ contract MainAccount is IAccount, Ownable, Initializable {
 
     //////////RECOVERY FUNCTIONS
 
-    /**
-     * @notice Set or update the guardian address
-     * @param newGuardian The address of the new guardian
-     */
+    // /**
+    //  * @notice Set or update the guardian address
+    //  * @param newGuardian The address of the new guardian
+    //  */
     // function setGuardian(address newGuardian) external onlyOwner {
     //     address oldGuardian = guardian;
     //     guardian = newGuardian;
     //     emit GuardianUpdated(oldGuardian, newGuardian);
     // }
 
-    /**
-     * @notice Initiate account recovery (guardian only)
-     * @param newOwner The proposed new owner address
-     */
+    // /**
+    //  * @notice Initiate account recovery (guardian only)
+    //  * @param newOwner The proposed new owner address
+    //  */
     // function initiateRecovery(address newOwner) external onlyGuardian {
     //     proposedOwner = newOwner;
     //     recoveryInitiated = block.timestamp;
     //     emit RecoveryInitiated(newOwner, block.timestamp + RECOVERY_PERIOD);
     // }
 
-    /**
-     * @notice Execute account recovery after waiting period (guardian only)
-     */
+    // /**
+    //  * @notice Execute account recovery after waiting period (guardian only)
+    //  */
     // function executeRecovery() external onlyGuardian {
     //     if (recoveryInitiated == 0) {
     //         revert MainAccount__RecoveryNotInitiated();
@@ -235,9 +235,9 @@ contract MainAccount is IAccount, Ownable, Initializable {
     //     emit RecoveryExecuted(newOwner);
     // }
 
-    /**
-     * @notice Cancel an ongoing recovery (owner only)
-     */
+    // /**
+    //  * @notice Cancel an ongoing recovery (owner only)
+    //  */
     // function cancelRecovery() external onlyOwner {
     //     proposedOwner = address(0);
     //     recoveryInitiated = 0;
@@ -261,10 +261,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
         return SIG_VALIDATION_SUCCESS;
     }
 
-    /**
-     * @notice Validate the signature of a user operation
-     * @dev Supports both owner signatures and session key signatures
-     */
+    // /**
+    //  * @notice Validate the signature of a user operation
+    //  * @dev Supports both owner signatures and session key signatures
+    //  */
     // function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
     //     internal
     //     view
@@ -317,9 +317,9 @@ contract MainAccount is IAccount, Ownable, Initializable {
         }
     }
 
-    /**
-     * @notice Pay prefunds to the EntryPoint
-     */
+    // /**
+    //  * @notice Pay prefunds to the EntryPoint
+    //  */
     // function _payPrefunds(uint256 missingAccountFunds) internal {
     //     if (missingAccountFunds != 0) {
     //         (bool success,) =
@@ -328,10 +328,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
     //     }
     // }
 
-    /**
-     * @notice Extract the target address from calldata
-     * @dev Assumes calldata is for execute() or executeBatch()
-     */
+    // /**
+    //  * @notice Extract the target address from calldata
+    //  * @dev Assumes calldata is for execute() or executeBatch()
+    //  */
     // function _getTargetFromCallData(bytes calldata callData) internal pure returns (address) {
     //     if (callData.length < 4) {
     //         return address(0);
@@ -357,10 +357,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
     //     return address(0);
     // }
 
-    /**
-     * @notice Extract the function selector from nested calldata
-     * @dev Extracts selector from the execute() call's functionData parameter
-     */
+    // /**
+    //  * @notice Extract the function selector from nested calldata
+    //  * @dev Extracts selector from the execute() call's functionData parameter
+    //  */
     // function _getSelectorFromCallData(bytes calldata callData) internal pure returns (bytes4) {
     //     if (callData.length < 4) {
     //         return bytes4(0);
@@ -387,10 +387,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
         return address(i_entryPoint);
     }
 
-    /**
-     * @notice Check if a session key is currently valid
-     * @param sessionKey The address to check
-     */
+    // /**
+    //  * @notice Check if a session key is currently valid
+    //  * @param sessionKey The address to check
+    //  */
     // function isSessionKeyValid(address sessionKey) external view returns (bool) {
     //     SessionKeyData memory key = sessionKeys[sessionKey];
     //     return key.isActive
@@ -398,10 +398,10 @@ contract MainAccount is IAccount, Ownable, Initializable {
     //         && block.timestamp <= key.validUntil;
     // }
 
-    /**
-     * @notice Get session key data
-     * @param sessionKey The address to query
-     */
+    // /**
+    //  * @notice Get session key data
+    //  * @param sessionKey The address to query
+    //  */
     // function getSessionKeyData(address sessionKey)
     //     external
     //     view
