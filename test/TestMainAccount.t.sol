@@ -9,23 +9,34 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {SendPackedUserOp, PackedUserOperation, MessageHashUtils, IEntryPoint} from "../script/SendPackedUserOp.s.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MainAccountFactory} from "../src/MainAccountFactory.sol";
 
 contract TestMainAccount is Test {
     using MessageHashUtils for bytes32;
 
     MainAccount mainAccount;
+    MainAccountFactory factory;
     HelperConfig helperConfig;
     ERC20Mock usdc;
     SendPackedUserOp sendPackedUserOp;
 
     uint256 constant AMOUNT = 1e18;
     address randomUser = makeAddr("randomUser");
+    address guardian = makeAddr("guardian");
+
+    // Session key test addresses
+    address sessionKeyAddr = makeAddr("sessionKey");
+    uint256 sessionKeyPrivateKey = 0x1234567890abcdef;
 
     function setUp() public {
         DeployMainAccount deployMain = new DeployMainAccount();
         (helperConfig, mainAccount) = deployMain.deployMainAccount();
         usdc = new ERC20Mock();
         sendPackedUserOp = new SendPackedUserOp();
+
+        // Set up guardian
+        vm.prank(mainAccount.owner());
+        mainAccount.setGuardian(guardian);
     }
 
     //USDC MINT
@@ -222,175 +233,179 @@ contract TestMainAccount is Test {
         mainAccount.executeBatch(destinations, values, functionDataArray);
     }
 
-    // //////////SESSION KEY TESTS
+    //////////SESSION KEY TESTS
 
-    // function testAddSessionKey() public {
-    //     //ARRANGE
-    //     uint48 validUntil = uint48(block.timestamp + 1 days);
-    //     address target = address(usdc);
-    //     bytes4 selector = ERC20Mock.transfer.selector;
+    function testAddSessionKey() public {
+        //ARRANGE
+        uint48 validUntil = uint48(block.timestamp + 1 days);
+        address target = address(usdc);
+        // bytes4 selector = ERC20Mock.transfer.selector;
+        bytes4 selector = bytes4(keccak256("transfer(address,uint256)"));
 
-    //     //ACT
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.addSessionKey(sessionKeyAddr, validUntil, target, selector);
+        //ACT
+        vm.prank(mainAccount.owner());
+        mainAccount.addSessionKey(sessionKeyAddr, validUntil, target, selector);
 
-    //     //ASSERT
-    //     MainAccount.SessionKeyData memory sessionKey = mainAccount.getSessionKeyData(sessionKeyAddr);
-    //     assertEq(sessionKey.validUntil, validUntil);
-    //     assertEq(sessionKey.target, target);
-    //     assertEq(sessionKey.selector, selector);
-    //     assertTrue(sessionKey.isActive);
-    //     assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
-    // }
+        //ASSERT
+        MainAccount.SessionKeyData memory sessionKey = mainAccount.getSessionKeyData(sessionKeyAddr);
+        assertEq(sessionKey.validUntil, validUntil);
+        assertEq(sessionKey.target, target);
+        assertEq(sessionKey.selector, selector);
+        assertTrue(sessionKey.isActive);
+        assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
+    }
 
-    // function testRevokeSessionKey() public {
-    //     //ARRANGE
-    //     uint48 validUntil = uint48(block.timestamp + 1 days);
+    function testRevokeSessionKey() public {
+        //ARRANGE
+        uint48 validUntil = uint48(block.timestamp + 1 days);
 
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
+        vm.prank(mainAccount.owner());
+        mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
 
-    //     assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
+        assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
 
-    //     //ACT
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.revokeSessionKey(sessionKeyAddr);
+        //ACT
+        vm.prank(mainAccount.owner());
+        mainAccount.revokeSessionKey(sessionKeyAddr);
 
-    //     //ASSERT
-    //     assertFalse(mainAccount.isSessionKeyValid(sessionKeyAddr));
-    // }
+        //ASSERT
+        assertFalse(mainAccount.isSessionKeyValid(sessionKeyAddr));
+    }
 
-    // function testSessionKeyExpiration() public {
-    //     //ARRANGE
-    //     uint48 validUntil = uint48(block.timestamp + 1 hours);
+    function testSessionKeyExpiration() public {
+        //ARRANGE
+        uint48 validUntil = uint48(block.timestamp + 1 hours);
 
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
+        vm.prank(mainAccount.owner());
+        mainAccount.addSessionKey(sessionKeyAddr, validUntil, address(0), bytes4(0));
 
-    //     assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
+        assertTrue(mainAccount.isSessionKeyValid(sessionKeyAddr));
 
-    //     //ACT - Move time forward past expiration
-    //     vm.warp(block.timestamp + 2 hours);
+        //ACT - Move time forward past expiration
+        vm.warp(block.timestamp + 2 hours);
 
-    //     //ASSERT
-    //     assertFalse(mainAccount.isSessionKeyValid(sessionKeyAddr));
-    // }
+        //ASSERT
+        assertFalse(mainAccount.isSessionKeyValid(sessionKeyAddr));
+    }
 
     // //////////RECOVERY TESTS
 
-    // function testInitiateRecovery() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
+    function testInitiateRecovery() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
 
-    //     //ACT
-    //     vm.prank(guardian);
-    //     mainAccount.initiateRecovery(newOwner);
+        //ACT
+        vm.prank(guardian);
+        mainAccount.initiateRecovery(newOwner);
 
-    //     //ASSERT
-    //     assertEq(mainAccount.proposedOwner(), newOwner);
-    //     assertEq(mainAccount.recoveryInitiated(), block.timestamp);
-    // }
+        //ASSERT
+        assertEq(mainAccount.proposedOwner(), newOwner);
+        assertEq(mainAccount.recoveryInitiated(), block.timestamp);
+    }
 
-    // function testExecuteRecoveryAfterPeriod() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
-    //     address oldOwner = mainAccount.owner();
+    function testExecuteRecoveryAfterPeriod() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
+        address oldOwner = mainAccount.owner();
 
-    //     vm.prank(guardian);
-    //     mainAccount.initiateRecovery(newOwner);
+        vm.prank(guardian);
+        mainAccount.initiateRecovery(newOwner);
 
-    //     //ACT - Wait for recovery period
-    //     vm.warp(block.timestamp + mainAccount.RECOVERY_PERIOD() + 1);
+        //ACT - Wait for recovery period
+        vm.warp(block.timestamp + mainAccount.RECOVERY_PERIOD() + 1);
 
-    //     vm.prank(guardian);
-    //     mainAccount.executeRecovery();
+        vm.prank(guardian);
+        mainAccount.executeRecovery();
 
-    //     //ASSERT
-    //     assertEq(mainAccount.owner(), newOwner);
-    //     assertNotEq(mainAccount.owner(), oldOwner);
-    //     assertEq(mainAccount.proposedOwner(), address(0));
-    //     assertEq(mainAccount.recoveryInitiated(), 0);
-    // }
+        //ASSERT
+        assertEq(mainAccount.owner(), newOwner);
+        assertNotEq(mainAccount.owner(), oldOwner);
+        assertEq(mainAccount.proposedOwner(), address(0));
+        assertEq(mainAccount.recoveryInitiated(), 0);
+    }
 
-    // function testCannotExecuteRecoveryBeforePeriod() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
+    function testCannotExecuteRecoveryBeforePeriod() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
 
-    //     vm.prank(guardian);
-    //     mainAccount.initiateRecovery(newOwner);
+        vm.prank(guardian);
+        mainAccount.initiateRecovery(newOwner);
 
-    //     //ACT & ASSERT - Try to execute too early
-    //     vm.prank(guardian);
-    //     vm.expectRevert(MainAccount.MainAccount__RecoveryPeriodNotPassed.selector);
-    //     mainAccount.executeRecovery();
-    // }
+        //ACT & ASSERT - Try to execute too early
+        vm.prank(guardian);
+        vm.expectRevert(MainAccount.MainAccount__RecoveryPeriodNotPassed.selector);
+        mainAccount.executeRecovery();
+    }
 
-    // function testOwnerCanCancelRecovery() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
+    function testOwnerCanCancelRecovery() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
 
-    //     vm.prank(guardian);
-    //     mainAccount.initiateRecovery(newOwner);
+        vm.prank(guardian);
+        mainAccount.initiateRecovery(newOwner);
 
-    //     //ACT
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.cancelRecovery();
+        //ACT
+        vm.prank(mainAccount.owner());
+        mainAccount.cancelRecovery();
 
-    //     //ASSERT
-    //     assertEq(mainAccount.proposedOwner(), address(0));
-    //     assertEq(mainAccount.recoveryInitiated(), 0);
-    // }
+        //ASSERT
+        assertEq(mainAccount.proposedOwner(), address(0));
+        assertEq(mainAccount.recoveryInitiated(), 0);
+    }
 
-    // function testNonGuardianCannotInitiateRecovery() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
+    function testNonGuardianCannotInitiateRecovery() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
 
-    //     //ACT & ASSERT
-    //     vm.prank(randomUser);
-    //     vm.expectRevert(MainAccount.MainAccount__OnlyGuardian.selector);
-    //     mainAccount.initiateRecovery(newOwner);
-    // }
+        //ACT & ASSERT
+        vm.prank(randomUser);
+        vm.expectRevert(MainAccount.MainAccount__OnlyGuardian.selector);
+        mainAccount.initiateRecovery(newOwner);
+    }
 
-    // //////////FACTORY TESTS
+    //////////FACTORY TESTS
 
-    // function testFactoryCreatesAccount() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
-    //     uint256 salt = 123;
+    function testFactoryCreatesAccount() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
+        uint256 salt = 123;
+        MainAccountFactory testFactory = new MainAccountFactory(IEntryPoint(helperConfig.getConfig().entryPoint));
 
-    //     //ACT
-    //     MainAccount newAccount = factory.createAccount(newOwner, salt);
+        //ACT
+        MainAccount newAccount = testFactory.createAccount(newOwner, salt);
 
-    //     //ASSERT
-    //     assertEq(newAccount.owner(), newOwner);
-    //     assertEq(address(newAccount.getEntryPoint()), address(helperConfig.getConfig().entryPoint));
-    // }
+        //ASSERT
+        assertEq(newAccount.owner(), newOwner);
+        assertEq(address(newAccount.getEntryPoint()), address(helperConfig.getConfig().entryPoint));
+    }
 
-    // function testFactoryComputesCorrectAddress() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
-    //     uint256 salt = 456;
+    function testFactoryComputesCorrectAddress() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
+        uint256 salt = 456;
+        MainAccountFactory testFactory = new MainAccountFactory(IEntryPoint(helperConfig.getConfig().entryPoint));
 
-    //     //ACT
-    //     address predictedAddress = factory.getAddress(newOwner, salt);
-    //     MainAccount newAccount = factory.createAccount(newOwner, salt);
+        //ACT
+        address predictedAddress = testFactory.getAddress(newOwner, salt);
+        MainAccount newAccount = testFactory.createAccount(newOwner, salt);
 
-    //     //ASSERT
-    //     assertEq(address(newAccount), predictedAddress);
-    // }
+        //ASSERT
+        assertEq(address(newAccount), predictedAddress);
+    }
 
-    // function testFactoryIdempotent() public {
-    //     //ARRANGE
-    //     address newOwner = makeAddr("newOwner");
-    //     uint256 salt = 789;
+    function testFactoryIdempotent() public {
+        //ARRANGE
+        address newOwner = makeAddr("newOwner");
+        uint256 salt = 789;
+        MainAccountFactory testFactory = new MainAccountFactory(IEntryPoint(helperConfig.getConfig().entryPoint));
 
-    //     //ACT
-    //     MainAccount account1 = factory.createAccount(newOwner, salt);
-    //     MainAccount account2 = factory.createAccount(newOwner, salt);
+        //ACT
+        MainAccount account1 = testFactory.createAccount(newOwner, salt);
+        MainAccount account2 = testFactory.createAccount(newOwner, salt);
 
-    //     //ASSERT
-    //     assertEq(address(account1), address(account2));
-    // }
+        //ASSERT
+        assertEq(address(account1), address(account2));
+    }
 
     // //////////EXISTING TESTS (updated for new structure)
 

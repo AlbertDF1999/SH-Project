@@ -5,7 +5,8 @@ pragma solidity ^0.8.24;
 import {Script} from "forge-std/Script.sol";
 import {MainAccount} from "../src/MainAccount.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-// import {MainAccountFactory} from "../src/MainAccountFactory.sol";
+import {MainAccountFactory} from "../src/MainAccountFactory.sol";
+import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 contract DeployMainAccount is Script {
     function run() public {
@@ -23,31 +24,26 @@ contract DeployMainAccount is Script {
         return (helperConfig, mainAccount);
     }
 
-    // /**
-    //  * @notice Deploy factory and create an account
-    //  * @dev This is the new recommended way to deploy accounts
-    //  */
-    // function deployMainAccountWithFactory()
-    //     public
-    //     returns (HelperConfig, MainAccountFactory, MainAccount)
-    // {
-    //     HelperConfig helperConfig = new HelperConfig();
-    //     HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+    /**
+     * @notice Deploy factory and create an account
+     * @dev This is the new recommended way to deploy accounts
+     */
+    function deployMainAccountWithFactory() public returns (HelperConfig, MainAccountFactory, MainAccount) {
+        HelperConfig helperConfig = new HelperConfig();
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
-    //     vm.startBroadcast(config.account);
+        vm.startBroadcast(config.account);
 
-    //     // Deploy factory
-    //     MainAccountFactory factory = new MainAccountFactory(
-    //         IEntryPoint(config.entryPoint)
-    //     );
+        // Deploy factory
+        MainAccountFactory factory = new MainAccountFactory(IEntryPoint(config.entryPoint));
 
-    //     // Create account using factory with salt 0
-    //     MainAccount mainAccount = factory.createAccount(config.account, 0);
+        // Create account using factory with salt 0
+        MainAccount mainAccount = factory.createAccount(config.account, 0);
 
-    //     vm.stopBroadcast();
+        vm.stopBroadcast();
 
-    //     return (helperConfig, factory, mainAccount);
-    // }
+        return (helperConfig, factory, mainAccount);
+    }
 
     // /**
     //  * @notice Legacy deployment method (kept for backward compatibility)
