@@ -10,7 +10,7 @@ import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPo
 
 contract DeployMainAccount is Script {
     function run() public {
-        deployMainAccount();
+        deployMainAccountWithFactory();
     }
 
     function deployMainAccount() public returns (HelperConfig, MainAccount) {

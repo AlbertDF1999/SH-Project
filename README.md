@@ -1,674 +1,349 @@
- # MainAccount - ERC-4337 Account Abstraction Wallet
+# ERC-4337 Account Abstraction Smart Wallet
 
-> A production-ready smart contract wallet implementing ERC-4337 Account Abstraction with advanced features including session keys, social recovery, and batch execution.
+A production-level ERC-4337 smart contract wallet built with Foundry, implementing account abstraction on Ethereum. This project demonstrates a complete smart wallet system with advanced features including batch execution, session key delegation, guardian-based social recovery, and a factory deployment pattern using CREATE2 and ERC1967 proxies.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Solidity](https://img.shields.io/badge/Solidity-^0.8.24-blue)](https://soliditylang.org/)
-[![Foundry](https://img.shields.io/badge/Built%20with-Foundry-red)](https://getfoundry.sh/)
+**Deployed on Sepolia Testnet:**
 
-## 📋 Table of Contents
+| Contract                     | Address                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| MainAccountFactory           | [`0xb2Dbf10b4a35EF65060da133cfC35d5a62025749`](https://sepolia.etherscan.io/address/0xb2dbf10b4a35ef65060da133cfc35d5a62025749) |
+| MainAccount (Implementation) | [`0xe9A5e69Cf322f89544a5167eD2d26a4C24551B58`](https://sepolia.etherscan.io/address/0xe9a5e69cf322f89544a5167ed2d26a4c24551b58) |
+| Proxy Wallet                 | [`0x1DA62d49D8bbd8Fbe879dD7aACa7153914c47363`](https://sepolia.etherscan.io/address/0x1da62d49d8bbd8fbe879dd7aaca7153914c47363) |
 
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Advanced Features](#advanced-features)
-- [Security](#security)
-- [Gas Optimization](#gas-optimization)
-- [Contributing](#contributing)
-- [License](#license)
+## Table of Contents
 
-## 🎯 Overview
+- [ERC-4337 Account Abstraction Smart Wallet](#erc-4337-account-abstraction-smart-wallet)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Architecture](#architecture)
+  - [Features](#features)
+    - [Core Wallet Functionality](#core-wallet-functionality)
+    - [Batch Execution](#batch-execution)
+    - [Session Keys](#session-keys)
+    - [Social Recovery](#social-recovery)
+    - [Factory Pattern with CREATE2](#factory-pattern-with-create2)
+  - [ERC-4337 UserOperation Flow](#erc-4337-useroperation-flow)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Build](#build)
+    - [Run Tests](#run-tests)
+  - [Deploy to Sepolia](#deploy-to-sepolia)
+    - [Environment Setup](#environment-setup)
+    - [Deploy Contracts](#deploy-contracts)
+    - [Fund Your Wallet](#fund-your-wallet)
+    - [Send a UserOperation](#send-a-useroperation)
+    - [Verify on Etherscan](#verify-on-etherscan)
+  - [Project Structure](#project-structure)
+  - [Testing](#testing)
+  - [Technologies](#technologies)
 
-MainAccount is a smart contract wallet that implements the ERC-4337 Account Abstraction standard, enabling gasless transactions, batch operations, temporary permissions, and social recovery. This implementation uses best practices including the proxy pattern for gas-efficient deployment and CREATE2 for deterministic addresses.
+## Overview
 
-### What is Account Abstraction?
+Traditional Ethereum accounts (EOAs) require users to hold ETH for gas fees, manage private keys directly, and can only perform one action per transaction. ERC-4337 Account Abstraction solves these limitations by turning wallets into smart contracts that can validate signatures with custom logic, batch multiple operations into a single transaction, delegate permissions via session keys, and recover access through trusted guardians.
 
-Account Abstraction (ERC-4337) allows smart contracts to act as wallets, enabling features impossible with traditional Externally Owned Accounts (EOAs):
+This project implements a complete ERC-4337 smart wallet that interacts with the canonical EntryPoint v0.7 contract (`0x0000000071727De22E5E9d8BAf0edAc6f37da032`).
 
-- **Gasless transactions** - Users don't need ETH for gas
-- **Batch operations** - Multiple actions in one transaction
-- **Custom validation** - Flexible signature schemes
-- **Session keys** - Temporary permissions for dApps
-- **Social recovery** - Recover accounts without seed phrases
+## Architecture
 
-## ✨ Features
-
-### Core Features
-- ✅ **ERC-4337 Compliant** - Full EntryPoint integration
-- ✅ **Proxy Pattern** - Gas-efficient account creation via factory
-- ✅ **Counterfactual Deployment** - Get address before deploying
-- ✅ **Signature Validation** - ECDSA with EIP-191 standard
-- ✅ **Owner Management** - OpenZeppelin Ownable integration
-
-### Advanced Features
-- 🔑 **Session Keys** - Temporary, restricted permissions
-- 📦 **Batch Execution** - Execute multiple transactions atomically
-- 🔄 **Social Recovery** - Guardian-based account recovery
-- ⏱️ **Time-based Permissions** - Granular access control
-- 🎯 **Target Restrictions** - Limit session keys to specific contracts
-- 🔒 **Function Restrictions** - Limit session keys to specific functions
-
-### Developer Features
-- 🧪 **Comprehensive Tests** - 100% coverage of core functionality
-- 📚 **Full Documentation** - NatSpec comments on all functions
-- 🛠️ **Multi-chain Support** - Ethereum, Sepolia, and Anvil
-- 🚀 **Easy Deployment** - Automated scripts with Foundry
-
-## 🏗️ Architecture
+The system consists of four main contracts:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         User / dApp                          │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            ▼
-                    ┌───────────────┐
-                    │   Bundler     │
-                    └───────┬───────┘
-                            │
-                            ▼
-                    ┌───────────────┐
-                    │  EntryPoint   │
-                    └───────┬───────┘
-                            │
-                            ▼
-        ┌───────────────────────────────────────┐
-        │                                        │
-        ▼                                        ▼
-┌──────────────┐                        ┌──────────────┐
-│   Paymaster  │                        │ MainAccount  │
-│  (Optional)  │                        │   (Proxy)    │
-└──────────────┘                        └──────┬───────┘
-                                               │
-                                               ▼
-                                    ┌──────────────────┐
-                                    │  Implementation  │
-                                    │  MainAccount.sol │
-                                    └──────────────────┘
+│                      EntryPoint v0.7                        │
+│              (Canonical singleton on all chains)             │
+│         0x0000000071727De22E5E9d8BAf0edAc6f37da032          │
+└──────────┬──────────────────────────────────┬───────────────┘
+           │ handleOps                        │
+           ▼                                  ▼
+┌─────────────────────┐          ┌──────────────────────────┐
+│  MainAccountFactory │          │     ERC1967 Proxy        │
+│                     │─creates─▶│    (User's Wallet)       │
+│  - createAccount()  │          │                          │
+│  - getAddress()     │          │  Delegates all calls to  │
+│  - Staking mgmt     │          │  implementation via      │
+│                     │          │  delegatecall             │
+└─────────────────────┘          └────────────┬─────────────┘
+                                              │ delegatecall
+                                              ▼
+                                 ┌──────────────────────────┐
+                                 │   MainAccount (Impl)     │
+                                 │                          │
+                                 │  - execute()             │
+                                 │  - executeBatch()        │
+                                 │  - validateUserOp()      │
+                                 │  - Session Keys          │
+                                 │  - Social Recovery       │
+                                 └──────────────────────────┘
 ```
 
-### Contract Structure
+The factory deploys a single MainAccount as a shared implementation contract. Each new wallet is a lightweight ERC1967 proxy (~212 bytes) that delegates all logic to this implementation via `delegatecall`, while maintaining its own separate storage for owner, session keys, guardian, and other state.
 
-```
-src/
-├── MainAccount.sol           # Smart contract wallet implementation
-└── MainAccountFactory.sol    # Factory for CREATE2 deployment
+## Features
 
-script/
-├── DeployMainAccount.s.sol   # Deployment scripts
-├── HelperConfig.s.sol        # Multi-chain configuration
-└── SendPackedUserOp.s.sol    # UserOperation helpers
+### Core Wallet Functionality
 
-test/
-└── TestMainAccount.t.sol     # Comprehensive test suite
-```
+The `MainAccount` contract implements the `IAccount` interface required by ERC-4337.
 
-## 🚀 Getting Started
+**`execute(address dest, uint256 value, bytes calldata functionData)`** — Sends a single transaction from the wallet. Can call any contract, send ETH, or do both. Access is restricted to the EntryPoint (for UserOp flow) or the wallet owner directly.
 
-### Prerequisites
+**`validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)`** — Called by the EntryPoint during UserOp processing. Validates the signature (owner or session key), then pays the required gas prefund to the EntryPoint from the wallet's balance. Returns `0` for success or `1` for failure.
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
-- Basic understanding of Ethereum and smart contracts
-- Node.js v16+ (for frontend integration)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/AlbertDF1999/SH-Project.git
-   cd SH-Project
-   ```
-
-2. **Install dependencies**
-   ```bash
-   forge install
-   git submodule update --init --recursive
-   ```
-
-3. **Build the project**
-   ```bash
-   forge build
-   ```
-
-4. **Run tests**
-   ```bash
-   forge test
-   ```
-
-## 💡 Usage
-
-### Quick Start - Local Deployment
-
-1. **Start Anvil (local blockchain)**
-   ```bash
-   anvil
-   ```
-
-2. **Deploy in a new terminal**
-   ```bash
-   forge script script/DeployMainAccount.s.sol:DeployMainAccount \
-     --rpc-url http://127.0.0.1:8545 \
-     --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-     --broadcast
-   ```
-
-### Basic Account Operations
-
-#### 1. Create a New Account
-
-```solidity
-// Using the factory
-MainAccountFactory factory = MainAccountFactory(factoryAddress);
-
-// Create account with deterministic address
-uint256 salt = 0;
-MainAccount account = factory.createAccount(ownerAddress, salt);
-
-// Or get address before deploying
-address futureAddress = factory.getAddress(ownerAddress, salt);
-```
-
-#### 2. Execute a Transaction
-
-```solidity
-// Owner can execute directly
-account.execute(
-    targetContract,      // destination
-    0,                   // value (ETH to send)
-    callData            // function call data
-);
-```
-
-#### 3. Batch Execute Multiple Transactions
-
-```solidity
-address[] memory targets = new address[](2);
-targets[0] = tokenAddress;
-targets[1] = dexAddress;
-
-uint256[] memory values = new uint256[](2);
-values[0] = 0;
-values[1] = 0;
-
-bytes[] memory calls = new bytes[](2);
-calls[0] = abi.encodeWithSelector(IERC20.approve.selector, dexAddress, amount);
-calls[1] = abi.encodeWithSelector(IDex.swap.selector, tokenA, tokenB, amount);
-
-account.executeBatch(targets, values, calls);
-```
-
-### Working with UserOperations
-
-```solidity
-// 1. Prepare the call data
-bytes memory callData = abi.encodeWithSelector(
-    account.execute.selector,
-    targetAddress,
-    value,
-    functionData
-);
-
-// 2. Create and sign UserOperation
-PackedUserOperation memory userOp = sendPackedUserOp.generateSignedUserOperation(
-    callData,
-    config,
-    address(account)
-);
-
-// 3. Submit to bundler or EntryPoint
-PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-ops[0] = userOp;
-IEntryPoint(entryPoint).handleOps(ops, payable(beneficiary));
-```
-
-## 🧪 Testing
-
-### Run All Tests
-```bash
-forge test
-```
-
-### Run Tests with Verbosity
-```bash
-# Show test names and results
-forge test -vv
-
-# Show stack traces
-forge test -vvv
-
-# Show full traces and setup
-forge test -vvvv
-```
-
-### Run Specific Tests
-```bash
-# Test a specific contract
-forge test --match-contract TestMainAccount
-
-# Test a specific function
-forge test --match-test testBatchExecution
-
-# Test with gas reporting
-forge test --gas-report
-```
-
-### Generate Coverage Report
-```bash
-forge coverage
-```
-
-### Test Categories
-
-Our test suite covers:
-
-- ✅ **Basic Execution** - Owner and non-owner scenarios
-- ✅ **Batch Operations** - Multi-transaction execution
-- ✅ **Session Keys** - Creation, validation, expiration, revocation
-- ✅ **Recovery** - Guardian management and recovery process
-- ✅ **Factory** - Account creation and address prediction
-- ✅ **UserOp Validation** - Signature recovery and validation
-- ✅ **EntryPoint Integration** - Full ERC-4337 flow
-
-## 📡 Deployment
-
-### Deploy to Local Network (Anvil)
-
-```bash
-# Terminal 1: Start Anvil
-anvil
-
-# Terminal 2: Deploy
-forge script script/DeployMainAccount.s.sol:DeployMainAccount \
-  --rpc-url http://127.0.0.1:8545 \
-  --broadcast
-```
-
-### Deploy to Sepolia Testnet
-
-```bash
-# Set environment variables
-export SEPOLIA_RPC_URL="your_rpc_url"
-export PRIVATE_KEY="your_private_key"
-
-# Deploy
-forge script script/DeployMainAccount.s.sol:DeployMainAccount \
-  --rpc-url $SEPOLIA_RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast \
-  --verify
-```
-
-### Deploy Options
-
-The deployment script provides three methods:
-
-1. **deployMainAccountWithFactory()** - ⭐ Recommended
-   - Deploys factory and creates account
-   - Production-ready approach
-
-2. **deployFactory()** - For factory-only deployment
-   - Deploy factory once
-   - Create multiple accounts later
-
-3. **deployMainAccount()** - Legacy method
-   - Direct deployment without factory
-   - Not recommended for production
-
-## 🔑 Advanced Features
-
-### Session Keys
-
-Session keys allow temporary, restricted access without exposing the main private key.
-
-#### Creating a Session Key
-
-```solidity
-// Allow a game contract to spend tokens for 24 hours
-account.addSessionKey(
-    gameSessionKeyAddress,           // The session key address
-    uint48(block.timestamp + 1 days), // Valid until
-    tokenAddress,                     // Can only call this contract
-    IERC20.transfer.selector          // Can only call this function
-);
-```
-
-#### Session Key Restrictions
-
-You can restrict session keys in multiple ways:
-
-```solidity
-// Unrestricted (any target, any function)
-addSessionKey(sessionKey, validUntil, address(0), bytes4(0));
-
-// Specific contract, any function
-addSessionKey(sessionKey, validUntil, uniswapRouter, bytes4(0));
-
-// Any contract, specific function
-addSessionKey(sessionKey, validUntil, address(0), IERC20.approve.selector);
-
-// Specific contract and function
-addSessionKey(sessionKey, validUntil, uniswapRouter, IUniswap.swap.selector);
-```
-
-#### Revoking a Session Key
-
-```solidity
-// Owner can revoke anytime
-account.revokeSessionKey(sessionKeyAddress);
-```
-
-#### Checking Session Key Status
-
-```solidity
-// Check if valid
-bool isValid = account.isSessionKeyValid(sessionKeyAddress);
-
-// Get full details
-MainAccount.SessionKeyData memory data = account.getSessionKeyData(sessionKeyAddress);
-```
-
-### Social Recovery
-
-Protect against lost keys with a trusted guardian.
-
-#### Setting Up Recovery
-
-```solidity
-// 1. Owner sets a guardian (trusted friend, family, or contract)
-account.setGuardian(guardianAddress);
-```
-
-#### Recovering an Account
-
-If the owner loses their private key:
-
-```solidity
-// 1. Guardian initiates recovery
-account.initiateRecovery(newOwnerAddress); // Called by guardian
-
-// 2. Wait for the recovery period (2 days)
-// During this time, the owner can cancel if malicious
-
-// 3. Guardian executes recovery after waiting period
-account.executeRecovery(); // Called by guardian
-
-// 4. Account is now owned by newOwnerAddress
-```
-
-#### Canceling Recovery
-
-```solidity
-// Owner can cancel anytime during the waiting period
-account.cancelRecovery(); // Called by owner
-```
+**`receive()`** — Allows the wallet to receive ETH transfers.
 
 ### Batch Execution
 
-Execute multiple transactions atomically in a single UserOperation.
+**`executeBatch(address[] calldata dest, uint256[] calldata values, bytes[] calldata functionData)`** — Executes multiple transactions in a single UserOperation. All three arrays must have the same length — each index represents one transaction. Execution is atomic: if any call fails, the entire batch reverts.
 
-#### Use Cases
+This is essential for complex DeFi interactions. For example, approving a token and swapping it on a DEX can be done in one UserOp instead of two, saving gas on repeated validation and prefund cycles.
 
-1. **Approve and Swap**
-   ```solidity
-   address[] memory targets = [tokenAddress, dexAddress];
-   bytes[] memory calls = [approveCall, swapCall];
-   account.executeBatch(targets, values, calls);
-   ```
+### Session Keys
 
-2. **Multi-token Transfer**
-   ```solidity
-   // Transfer multiple tokens in one transaction
-   address[] memory targets = [usdc, dai, usdt];
-   bytes[] memory calls = [transferUSDC, transferDAI, transferUSDT];
-   account.executeBatch(targets, values, calls);
-   ```
+Session keys allow the owner to grant limited, temporary permissions to other addresses without sharing the owner's private key.
 
-3. **Complex DeFi Strategy**
-   ```solidity
-   // 1. Withdraw from Aave
-   // 2. Swap on Uniswap
-   // 3. Deposit to Compound
-   // All in one atomic transaction
-   ```
+**`addSessionKey(address sessionKey, uint48 validUntil, address target, bytes4 selector)`** — Creates a session key with four constraints:
 
-## 🔐 Security
+- **Time window**: Active from creation until `validUntil` timestamp
+- **Target contract**: Restrict to a specific contract address, or `address(0)` for any contract
+- **Function selector**: Restrict to a specific function, or `bytes4(0)` for any function
+- **Active status**: Can be revoked at any time
 
-### Access Control
+**`revokeSessionKey(address sessionKey)`** — Instantly deactivates a session key by setting `isActive` to `false`.
 
-- **Owner-only functions**: `execute`, `executeBatch`, `addSessionKey`, `revokeSessionKey`, `setGuardian`, `cancelRecovery`
-- **Guardian-only functions**: `initiateRecovery`, `executeRecovery`
-- **EntryPoint-only functions**: `validateUserOp`
-- **EntryPoint or Owner**: `execute`, `executeBatch`
+**`isSessionKeyValid(address sessionKey)`** — Returns whether a session key is currently active and within its time window.
 
-### Security Features
+**Signature Validation**: The `_validateSignature` function first checks if the signer is the owner (unlimited permissions). If not, it looks up the signer in the session keys mapping and validates all four constraints: active status, time window, target contract, and function selector. The target and selector are extracted from the UserOp's calldata by parsing the ABI-encoded `execute()` call.
 
-- ✅ **Signature Validation** - ECDSA with EIP-191
-- ✅ **Nonce Management** - Prevents replay attacks
-- ✅ **Time Locks** - Recovery has 2-day delay
-- ✅ **Access Modifiers** - Strict permission checks
-- ✅ **Event Emissions** - All state changes emit events
-- ✅ **Reentrancy Protection** - Via modifiers and checks
-- ✅ **Initializer Protection** - Can only initialize once
+**Example use case**: A blockchain game creates a session key that can only call `makeMove()` on the game contract for 2 hours. If compromised, the attacker can only make game moves, not drain the wallet.
 
-### Audit Status
+### Social Recovery
 
-⚠️ **This contract has NOT been audited.** Do not use in production with real funds without a professional security audit.
+A guardian-based recovery mechanism allows ownership transfer if the owner loses access to their private key.
 
-### Known Limitations
+**`setGuardian(address newGuardian)`** — Owner-only function to set or change the guardian address. The guardian could be a trusted friend, family member, or a separate wallet you control.
 
-1. Single guardian (consider multi-sig guardian for production)
-2. Fixed recovery period (2 days)
-3. No spending limits on session keys
-4. No rate limiting on operations
+**`initiateRecovery(address newOwner)`** — Guardian calls this to start the recovery process. Sets the proposed new owner and records the current timestamp. Each new call resets the timer to prevent the guardian from pre-running the clock with a benign address then swapping in a malicious one.
 
-## ⚡ Gas Optimization
+**`executeRecovery()`** — Guardian calls this after the 2-day recovery period has passed. Transfers ownership to the proposed address and resets all recovery state.
 
-### Deployment Costs
+**`cancelRecovery()`** — Owner-only function to stop a malicious or unauthorized recovery attempt. This is the safety net — if you see a recovery was initiated that you didn't authorize, you have 2 days to cancel it.
 
-| Method                   | Gas Cost   | Notes         |
-| ------------------------ | ---------- | ------------- |
-| Factory Deployment       | ~3,000,000 | One-time cost |
-| Account Creation (Proxy) | ~300,000   | Via factory   |
-| Direct Deployment        | ~2,000,000 | Legacy method |
+**Security model**: The 2-day `RECOVERY_PERIOD` is the critical design element. Without it, a compromised guardian could instantly steal the wallet. With it, the owner always has time to notice and cancel. The checks and balances ensure: only the owner can set the guardian, only the guardian can initiate/execute recovery, and only the owner can cancel recovery.
 
-### Operation Costs
+### Factory Pattern with CREATE2
 
-| Operation             | Gas Cost | Notes                       |
-| --------------------- | -------- | --------------------------- |
-| Single Execute        | ~50,000  | Basic transaction           |
-| Batch Execute (2 ops) | ~70,000  | Saves gas vs 2 separate txs |
-| Batch Execute (5 ops) | ~120,000 | Significant savings         |
-| Add Session Key       | ~45,000  | One-time per key            |
-| Validate UserOp       | ~35,000  | Per operation               |
+The `MainAccountFactory` enables gas-efficient wallet creation with deterministic addresses.
 
-### Optimization Tips
+**`createAccount(address owner, uint256 salt)`** — Deploys a new ERC1967 proxy pointing to the shared implementation. Uses CREATE2 for deterministic address computation. The function is idempotent — calling it twice with the same parameters returns the existing wallet instead of reverting.
 
-1. **Use Factory** - 85% cheaper than direct deployment
-2. **Batch Operations** - Up to 40% savings vs separate transactions
-3. **Session Keys** - Avoid signing every transaction
-4. **Counterfactual Deployment** - Receive funds before deploying
+**`getAddress(address owner, uint256 salt)`** — Computes the wallet address before deployment using the CREATE2 formula: `address = keccak256(0xff ++ factory ++ salt ++ keccak256(bytecode))[12:]`. This allows users to receive funds at their wallet address before it even exists on-chain.
 
-## 🛠️ Development
+**Proxy pattern**: Each wallet proxy is only ~212 bytes of runtime bytecode compared to ~11,708 bytes for the full implementation. The proxy forwards all calls to the implementation via `delegatecall`, which runs the implementation's code but writes to the proxy's storage. This means every proxy has its own independent state (owner, session keys, guardian) while sharing the same logic.
 
-### Project Structure
+**`_disableInitializers()`**: Called in the MainAccount constructor to permanently lock the implementation contract's initialization state to `type(uint64).max`. This prevents attackers from calling `initialize()` on the implementation directly, which could compromise all proxies that delegate to it. Each proxy is initialized exactly once through the factory's `createAccount`, which calls `initialize(owner)` atomically during proxy deployment.
+
+**ERC-4337 integration**: In production, the first UserOperation includes `initCode` containing the factory address and `createAccount` calldata. The EntryPoint calls the factory to deploy the wallet, then proceeds with validation and execution — all in one transaction. The user never manually deploys their wallet.
+
+## ERC-4337 UserOperation Flow
+
+When a UserOperation is submitted through the EntryPoint, the following steps occur:
+
+1. **Bundler** submits the UserOp by calling `EntryPoint.handleOps()` and pays L1 gas upfront
+2. **EntryPoint** calls `validateUserOp()` on the wallet (proxy → delegatecall → implementation)
+3. **Signature validation**: `ecrecover` recovers the signer, checks against owner and session keys
+4. **Prefund payment**: Wallet sends `(verificationGas + callGas + preVerificationGas) × maxFeePerGas` to EntryPoint as a gas deposit
+5. **Execution**: EntryPoint calls `execute()` or `executeBatch()` on the wallet to perform the actual operation
+6. **Gas accounting**: EntryPoint calculates actual gas used, compensates the bundler from the deposit, and credits remaining funds back to the wallet
+
+## Getting Started
+
+### Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
+- [Git](https://git-scm.com/)
+- A wallet with Sepolia ETH (for testnet deployment)
+
+### Installation
+
+```bash
+git clone https://github.com/AlbertDF1999/SH-Project.git
+cd SH-Project
+forge install
+```
+
+### Build
+
+```bash
+forge build
+```
+
+### Run Tests
+
+```bash
+# Run all 17 tests
+forge test
+
+# Run with detailed traces
+forge test -vvvv
+
+# Run specific test
+forge test --match-test testBatchExecution -vvvv
+```
+
+## Deploy to Sepolia
+
+### Environment Setup
+
+1. Create a `.env` file in the project root:
+
+```env
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
+PRIVATE_KEY=0xYOUR_PRIVATE_KEY
+ETHERSCAN_API_KEY=YOUR_ETHERSCAN_KEY
+```
+
+2. Update `script/HelperConfig.s.sol` with your wallet address:
+
+```solidity
+address constant BURNER_WALLET = YOUR_WALLET_ADDRESS;
+```
+
+3. Load environment variables:
+
+```bash
+source .env
+```
+
+4. Get Sepolia ETH from the [Google Cloud Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia) or [Alchemy Faucet](https://www.alchemy.com/faucets/ethereum-sepolia).
+
+### Deploy Contracts
+
+Make sure `DeployMainAccount.s.sol` has `run()` calling `deployMainAccountWithFactory()`, then:
+
+```bash
+forge script script/DeployMainAccount.s.sol:DeployMainAccount \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvvv
+```
+
+This deploys three contracts in two transactions:
+1. **MainAccountFactory** (which deploys the MainAccount implementation in its constructor)
+2. **Your proxy wallet** (created by calling `factory.createAccount`)
+
+Save the deployed addresses from the output.
+
+### Fund Your Wallet
+
+Send Sepolia ETH to your proxy wallet address:
+
+```bash
+cast send YOUR_PROXY_ADDRESS \
+    --value 0.01ether \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --private-key $PRIVATE_KEY
+```
+
+### Send a UserOperation
+
+Update `script/SendUserOpSepolia.s.sol` with your proxy wallet address:
+
+```solidity
+address mainAccountAddr = YOUR_PROXY_ADDRESS;
+```
+
+Then run:
+
+```bash
+forge script script/SendUserOpSepolia.s.sol:SendUserOpSepolia \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    --gas-estimate-multiplier 500 \
+    -vvvv
+```
+
+The `--gas-estimate-multiplier 500` flag is necessary because the EntryPoint's internal gas accounting requires more gas than Forge's default estimate provides. Without it, the transaction reverts with `AA95 out of gas`.
+
+### Verify on Etherscan
+
+```bash
+# Verify the factory
+forge verify-contract YOUR_FACTORY_ADDRESS \
+    src/MainAccountFactory.sol:MainAccountFactory \
+    --chain sepolia \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --etherscan-api-key $ETHERSCAN_API_KEY \
+    --constructor-args $(cast abi-encode "constructor(address)" 0x0000000071727De22E5E9d8BAf0edAc6f37da032)
+
+# Verify the implementation
+forge verify-contract YOUR_IMPLEMENTATION_ADDRESS \
+    src/MainAccount.sol:MainAccount \
+    --chain sepolia \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --etherscan-api-key $ETHERSCAN_API_KEY \
+    --constructor-args $(cast abi-encode "constructor(address)" 0x0000000071727De22E5E9d8BAf0edAc6f37da032)
+
+# Verify the proxy
+forge verify-contract YOUR_PROXY_ADDRESS \
+    lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+    --chain sepolia \
+    --rpc-url $SEPOLIA_RPC_URL \
+    --etherscan-api-key $ETHERSCAN_API_KEY \
+    --constructor-args $(cast abi-encode "constructor(address,bytes)" YOUR_IMPLEMENTATION_ADDRESS $(cast calldata "initialize(address)" YOUR_WALLET_ADDRESS))
+```
+
+## Project Structure
 
 ```
 SH-Project/
 ├── src/
-│   ├── MainAccount.sol          # Main wallet implementation
-│   └── MainAccountFactory.sol   # Factory for account creation
+│   ├── MainAccount.sol              # Core wallet contract (implementation)
+│   └── MainAccountFactory.sol       # Factory for CREATE2 proxy deployment
 ├── script/
-│   ├── DeployMainAccount.s.sol  # Deployment scripts
-│   ├── HelperConfig.s.sol       # Network configuration
-│   └── SendPackedUserOp.s.sol   # UserOp utilities
+│   ├── DeployMainAccount.s.sol      # Deployment scripts (direct + factory)
+│   ├── HelperConfig.s.sol           # Network configuration (EntryPoint, accounts)
+│   ├── SendPackedUserOp.s.sol       # UserOp construction and signing helper
+│   └── SendUserOpSepolia.s.sol      # Script to send UserOp on Sepolia
 ├── test/
-│   └── TestMainAccount.t.sol    # Test suite
+│   └── TestMainAccount.t.sol        # 17 tests covering all features
 ├── lib/
-│   ├── account-abstraction/     # ERC-4337 reference
-│   ├── openzeppelin-contracts/  # OpenZeppelin libraries
-│   └── forge-std/               # Foundry standard library
-├── foundry.toml                 # Foundry configuration
-└── README.md                    # This file
+│   ├── account-abstraction/         # ERC-4337 EntryPoint interfaces
+│   ├── openzeppelin-contracts/      # OpenZeppelin (Ownable, ECDSA, ERC1967Proxy)
+│   └── forge-std/                   # Foundry testing utilities
+└── foundry.toml                     # Foundry configuration
 ```
 
-### Code Style
+## Testing
 
-- Solidity 0.8.24
-- NatSpec documentation on all public functions
-- OpenZeppelin contracts for standard implementations
-- Custom errors for gas efficiency
-- Events for all state changes
+The test suite includes 17 tests covering all features:
 
-### Adding New Features
+| Test                                            | Description                                            |
+| ----------------------------------------------- | ------------------------------------------------------ |
+| `testOwnerCanExecuteCommands`                   | Owner can call execute() directly                      |
+| `testNonOwnerCannotExecuteCommands`             | Random addresses are rejected                          |
+| `testRecoverSignedOp`                           | ECDSA signature recovery returns correct owner         |
+| `testValidateUserOp`                            | validateUserOp returns 0 (success) for valid signature |
+| `testEntryPointCanExecuteCommands`              | Full UserOp flow through EntryPoint works              |
+| `testBatchExecution`                            | executeBatch processes multiple calls atomically       |
+| `testBatchExecutionRevertsOnInvalidArrayLength` | Mismatched array lengths revert                        |
+| `testAddSessionKey`                             | Session keys are stored with correct constraints       |
+| `testRevokeSessionKey`                          | Revoked keys are no longer valid                       |
+| `testSessionKeyExpiration`                      | Expired keys are rejected                              |
+| `testInitiateRecovery`                          | Guardian can start recovery process                    |
+| `testExecuteRecoveryAfterPeriod`                | Recovery succeeds after 2-day delay                    |
+| `testCannotExecuteRecoveryBeforePeriod`         | Early recovery execution reverts                       |
+| `testOwnerCanCancelRecovery`                    | Owner can cancel pending recovery                      |
+| `testNonGuardianCannotInitiateRecovery`         | Non-guardians are rejected                             |
+| `testFactoryCreatesAccount`                     | Factory deploys working proxy wallet                   |
+| `testFactoryComputesCorrectAddress`             | CREATE2 address prediction matches actual              |
+| `testFactoryIdempotent`                         | Duplicate createAccount returns existing wallet        |
 
-1. Write tests first (TDD approach)
-2. Implement feature in contract
-3. Update deployment scripts if needed
-4. Document in NatSpec comments
-5. Update README
+## Technologies
 
-## 🔄 Migration from EOA
-
-If you're migrating from a traditional wallet:
-
-1. **Deploy Account**
-   ```solidity
-   MainAccount account = factory.createAccount(yourAddress, 0);
-   ```
-
-2. **Transfer Assets**
-   - Send tokens from EOA to account address
-   - Account can receive before deployment (counterfactual)
-
-3. **Update dApp Integrations**
-   - Use UserOperations instead of direct transactions
-   - Integrate with bundler service
-
-4. **Set Up Recovery**
-   ```solidity
-   account.setGuardian(trustedAddress);
-   ```
-
-## 🌐 Frontend Integration
-
-### Using with ethers.js
-
-```javascript
-import { ethers } from 'ethers';
-
-// Get account address before deploying
-const factory = new ethers.Contract(factoryAddress, factoryABI, signer);
-const accountAddress = await factory.getAddress(ownerAddress, salt);
-
-// Create account when needed
-const tx = await factory.createAccount(ownerAddress, salt);
-await tx.wait();
-
-// Interact with account
-const account = new ethers.Contract(accountAddress, accountABI, signer);
-```
-
-### Using with viem/wagmi
-
-```typescript
-import { createPublicClient, http } from 'viem';
-import { mainnet } from 'viem/chains';
-
-const publicClient = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
-
-// Read account data
-const isValid = await publicClient.readContract({
-  address: accountAddress,
-  abi: mainAccountABI,
-  functionName: 'isSessionKeyValid',
-  args: [sessionKeyAddress],
-});
-```
-
-### Using with Account Abstraction SDKs
-
-```typescript
-// Using Alchemy's aa-sdk
-import { LocalAccountSigner } from '@alchemy/aa-core';
-import { createModularAccountAlchemyClient } from '@alchemy/aa-alchemy';
-
-const client = await createModularAccountAlchemyClient({
-  apiKey: 'your-api-key',
-  chain: sepolia,
-  signer: LocalAccountSigner.mnemonicToAccountSigner(mnemonic),
-});
-
-// Send UserOperation
-const hash = await client.sendUserOperation({
-  target: '0x...',
-  data: '0x...',
-  value: 0n,
-});
-```
-
-## 📚 Resources
-
-### ERC-4337 Resources
-- [EIP-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
-- [Account Abstraction Docs](https://docs.alchemy.com/docs/account-abstraction-overview)
-- [Bundler Services](https://www.alchemy.com/bundler)
-
-### Development Tools
-- [Foundry Book](https://book.getfoundry.sh/)
-- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
-- [Ethereum Development Documentation](https://ethereum.org/en/developers/)
-
-### Community
-- [Account Abstraction Discord](https://discord.gg/account-abstraction)
-- [Ethereum Stack Exchange](https://ethereum.stackexchange.com/)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Write tests for all new features
-- Follow existing code style
-- Add NatSpec documentation
-- Update README if needed
-- Ensure all tests pass (`forge test`)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## ⚠️ Disclaimer
-
-This software is provided "as is", without warranty of any kind. The authors are not responsible for any losses incurred through the use of this code. Always audit smart contracts before deploying with real funds.
-
-## 🙏 Acknowledgments
-
-- [Ethereum Foundation](https://ethereum.org/) for ERC-4337
-- [OpenZeppelin](https://openzeppelin.com/) for secure contract libraries
-- [Foundry](https://getfoundry.sh/) for excellent development tools
-- The Account Abstraction community for inspiration and support
-
-## 📞 Contact & Support
-
-- **Issues**: [GitHub Issues](https://github.com/AlbertDF1999/SH-Project/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/AlbertDF1999/SH-Project/discussions)
-
----
-
-**Built with ❤️ using Foundry and ERC-4337**
-
-*For questions, feedback, or collaboration opportunities, please open an issue or discussion on GitHub.*
+- **Solidity 0.8.24** — Smart contract language
+- **Foundry** — Development framework (Forge, Cast, Anvil)
+- **ERC-4337 v0.7** — Account abstraction standard (EntryPoint, PackedUserOperation)
+- **OpenZeppelin Contracts** — Ownable, ECDSA, MessageHashUtils, ERC1967Proxy, Initializable
+- **Sepolia Testnet** — Ethereum test network for deployment and testing
