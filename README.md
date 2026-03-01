@@ -194,7 +194,7 @@ forge test --match-test testBatchExecution -vvvv
 
 ### Environment Setup
 
-1. Create a `.env` file in the project root:
+1. Create a `.env` file in the project root (USE A BURNER WALLET, DO NOT USE A WALLET WITH ASSETS YOU CAN'T AFFORD TO LOSE):
 
 ```env
 SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
