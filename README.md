@@ -30,6 +30,7 @@ A production-level ERC-4337 smart contract wallet built with Foundry, implementi
     - [Run Tests](#run-tests)
   - [Deploy to Sepolia](#deploy-to-sepolia)
     - [Environment Setup](#environment-setup)
+- [⚠️ USE A BURNER WALLET. DO NOT USE A WALLET WITH ASSETS YOU CAN'T AFFORD TO LOSE](#️-use-a-burner-wallet-do-not-use-a-wallet-with-assets-you-cant-afford-to-lose)
     - [Deploy Contracts](#deploy-contracts)
     - [Fund Your Wallet](#fund-your-wallet)
     - [Send a UserOperation](#send-a-useroperation)
@@ -194,7 +195,9 @@ forge test --match-test testBatchExecution -vvvv
 
 ### Environment Setup
 
-1. Create a `.env` file in the project root (USE A BURNER WALLET, DO NOT USE A WALLET WITH ASSETS YOU CAN'T AFFORD TO LOSE):
+# ⚠️ USE A BURNER WALLET. DO NOT USE A WALLET WITH ASSETS YOU CAN'T AFFORD TO LOSE
+
+1. Create a `.env` file in the project root:
 
 ```env
 SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
