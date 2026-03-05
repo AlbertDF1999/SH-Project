@@ -46,6 +46,8 @@ contract TestMainAccount is Test {
     //USDC Contract
     //come from the entrypoing
 
+    //////////BASIC EXECUTION TESTS
+
     function testOwnerCanExecuteCommands() public {
         //ARRANGE
         assertEq(usdc.balanceOf(address(mainAccount)), 0);
@@ -140,63 +142,6 @@ contract TestMainAccount is Test {
         //assert
         assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT);
     }
-
-    // using MessageHashUtils for bytes32;
-
-    // MainAccount mainAccount;
-    // MainAccountFactory factory;
-    // HelperConfig helperConfig;
-    // ERC20Mock usdc;
-    // SendPackedUserOp sendPackedUserOp;
-
-    // uint256 constant AMOUNT = 1e18;
-    // address randomUser = makeAddr("randomUser");
-    // address guardian = makeAddr("guardian");
-
-    // // Session key test addresses
-    // address sessionKeyAddr = makeAddr("sessionKey");
-    // uint256 sessionKeyPrivateKey = 0x1234567890abcdef;
-
-    // function setUp() public {
-    //     DeployMainAccount deployMain = new DeployMainAccount();
-    //     (helperConfig, factory, mainAccount) = deployMain.deployMainAccountWithFactory();
-    //     usdc = new ERC20Mock();
-    //     sendPackedUserOp = new SendPackedUserOp();
-
-    //     // Set up guardian
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.setGuardian(guardian);
-    // }
-
-    // //////////BASIC EXECUTION TESTS
-
-    // function testOwnerCanExecuteCommands() public {
-    //     //ARRANGE
-    //     assertEq(usdc.balanceOf(address(mainAccount)), 0);
-    //     address dest = address(usdc);
-    //     uint256 value = 0;
-    //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-
-    //     //ACT
-    //     vm.prank(mainAccount.owner());
-    //     mainAccount.execute(dest, value, functionData);
-
-    //     //ASSERT
-    //     assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT);
-    // }
-
-    // function testNonOwnerCannotExecuteCommands() public {
-    //     //ARRANGE
-    //     assertEq(usdc.balanceOf(address(mainAccount)), 0);
-    //     address dest = address(usdc);
-    //     uint256 value = 0;
-    //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-
-    //     //ACT
-    //     vm.prank(randomUser);
-    //     vm.expectRevert(MainAccount.MainAccount__NotFromEntryPointorOwner.selector);
-    //     mainAccount.execute(dest, value, functionData);
-    // }
 
     //////////BATCH EXECUTION TESTS
 
@@ -406,73 +351,4 @@ contract TestMainAccount is Test {
         //ASSERT
         assertEq(address(account1), address(account2));
     }
-
-    // //////////EXISTING TESTS (updated for new structure)
-
-    // function testRecoverSignedOp() public {
-    //     //ARRANGE
-    //     assertEq(usdc.balanceOf(address(mainAccount)), 0);
-    //     address dest = address(usdc);
-    //     uint256 value = 0;
-    //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-    //     bytes memory executeCallData = abi.encodeWithSelector(mainAccount.execute.selector, dest, value, functionData);
-    //     PackedUserOperation memory packedUserOp = sendPackedUserOp.generateSignedUserOperation(
-    //         executeCallData, helperConfig.getConfig(), address(mainAccount)
-    //     );
-    //     bytes32 userOpHash = IEntryPoint(helperConfig.getConfig().entryPoint).getUserOpHash(packedUserOp);
-    //     bytes32 digest = userOpHash.toEthSignedMessageHash();
-
-    //     //ACT
-    //     address actualSigner = ECDSA.recover(digest, packedUserOp.signature);
-
-    //     //ASSERT
-    //     assertEq(actualSigner, mainAccount.owner());
-    // }
-
-    // function testValidateUserOp() public {
-    //     //ARRANGE
-    //     assertEq(usdc.balanceOf(address(mainAccount)), 0);
-    //     address dest = address(usdc);
-    //     uint256 value = 0;
-    //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-    //     bytes memory executeCallData = abi.encodeWithSelector(mainAccount.execute.selector, dest, value, functionData);
-    //     PackedUserOperation memory packedUserOp = sendPackedUserOp.generateSignedUserOperation(
-    //         executeCallData, helperConfig.getConfig(), address(mainAccount)
-    //     );
-    //     bytes32 userOpHash = IEntryPoint(helperConfig.getConfig().entryPoint).getUserOpHash(packedUserOp);
-    //     uint256 missingAccountFunds = 1e18;
-
-    //     vm.deal(address(mainAccount), 1e18);
-
-    //     //ACT
-    //     vm.prank(helperConfig.getConfig().entryPoint);
-    //     uint256 validationData = mainAccount.validateUserOp(packedUserOp, userOpHash, missingAccountFunds);
-
-    //     //ASSERT
-    //     assertEq(validationData, 0);
-    // }
-
-    // function testEntryPointCanExecuteCommands() public {
-    //     //ARRANGE
-    //     assertEq(usdc.balanceOf(address(mainAccount)), 0);
-    //     address dest = address(usdc);
-    //     uint256 value = 0;
-    //     bytes memory functionData = abi.encodeWithSelector(ERC20Mock.mint.selector, address(mainAccount), AMOUNT);
-    //     bytes memory executeCallData = abi.encodeWithSelector(mainAccount.execute.selector, dest, value, functionData);
-    //     PackedUserOperation memory packedUserOp = sendPackedUserOp.generateSignedUserOperation(
-    //         executeCallData, helperConfig.getConfig(), address(mainAccount)
-    //     );
-
-    //     vm.deal(address(mainAccount), 1e18);
-
-    //     PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-    //     ops[0] = packedUserOp;
-
-    //     //ACT
-    //     vm.prank(randomUser);
-    //     IEntryPoint(helperConfig.getConfig().entryPoint).handleOps(ops, payable(randomUser));
-
-    //     //ASSERT
-    //     assertEq(usdc.balanceOf(address(mainAccount)), AMOUNT);
-    // }
 }

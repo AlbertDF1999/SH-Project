@@ -240,21 +240,6 @@ contract MainAccount is IAccount, Ownable, Initializable {
 
     //////////INTERNAL FUNCTIONS
 
-    //EIP-191 version of the signed hash (MessageHashUtils)
-    // function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
-    //     internal
-    //     view
-    //     returns (uint256 validationData)
-    // {
-    //     bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
-    //     address signer = ECDSA.recover(ethSignedMessageHash, userOp.signature);
-    //     if (signer != owner()) {
-    //         return SIG_VALIDATION_FAILED;
-    //     }
-
-    //     return SIG_VALIDATION_SUCCESS;
-    // }
-
     /**
      * @notice Validate the signature of a user operation
      * @dev Supports both owner signatures and session key signatures
@@ -302,14 +287,6 @@ contract MainAccount is IAccount, Ownable, Initializable {
 
         return SIG_VALIDATION_SUCCESS;
     }
-
-    // function _payPrefunds(uint256 missingAccountFunds) internal {
-    //     if (missingAccountFunds != 0) {
-    //         (bool success,) =
-    //             payable(address(i_entryPoint)).call{value: missingAccountFunds, gas: type(uint256).max}("");
-    //         require(success, "Failed to pay prefund");
-    //     }
-    // }
 
     /**
      * @notice Pay prefunds to the EntryPoint
